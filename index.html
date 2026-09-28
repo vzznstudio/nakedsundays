@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Naked Sundays — Delivery</title>
+<style>
+  :root{
+    --black:#000;
+    --white:#fff;
+    --muted:rgba(255,255,255,.42);
+    --muted-2:rgba(255,255,255,.24);
+    --line:rgba(255,255,255,.18);
+    --green:#3ba776;
+    --green-dim:rgba(59,167,118,.12);
+    --ease:cubic-bezier(.16,1,.3,1);
+    /* clip aspect ratio — change to 4/3 if the Vimeo sources are landscape */
+    --ratio:9/16;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box}
+
+  html,body{background:var(--black);}
+
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--white);
+    min-height:100vh;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- custom cursor ---------- */
+  .cursor{
+    position:fixed;top:0;left:0;
+    width:22px;height:22px;border-radius:50%;
+    background:var(--white);
+    pointer-events:none;
+    z-index:9999;
+    transform:translate(-50%,-50%);
+    mix-blend-mode:difference;
+    transition:width .3s var(--ease),height .3s var(--ease),opacity .3s;
+  }
+  .cursor-glow{
+    position:fixed;top:0;left:0;
+    width:60px;height:60px;border-radius:50%;
+    background:rgba(255,255,255,.5);
+    filter:blur(22px);
+    pointer-events:none;
+    z-index:9998;
+    transform:translate(-50%,-50%);
+    opacity:.9;
+  }
+  .cursor.is-big{width:44px;height:44px}
+  @media (hover:none),(pointer:coarse){
+    .cursor,.cursor-glow{display:none}
+    body{cursor:auto}
+  }
+  @media (hover:hover) and (pointer:fine){
+    body,a,button{cursor:none}
+  }
+
+  /* ---------- brand logo (circle crop) ---------- */
+  .logo{
+    border-radius:50%;
+    object-fit:cover;
+    object-position:center;
+    background:var(--white);
+    padding:0;
+    display:block;
+  }
+  .logo--lg{width:118px;height:118px}
+  .logo--sm{width:38px;height:38px}
+
+  /* ---------- pill button ---------- */
+  .pill{
+    position:relative;
+    display:inline-block;
+    padding:15px 40px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--white);
+    font:inherit;
+    font-size:12px;
+    letter-spacing:.19em;
+    text-transform:uppercase;
+    text-decoration:none;
+    overflow:hidden;
+    isolation:isolate;
+    transition:border-color .5s var(--ease),color .5s var(--ease);
+  }
+  .pill::before{
+    content:"";
+    position:absolute;inset:0;
+    background:var(--white);
+    transform:scaleX(0);
+    transform-origin:left center;
+    transition:transform .55s var(--ease);
+    z-index:-1;
+  }
+  .pill:hover::before,.pill:focus-visible::before{transform:scaleX(1)}
+  .pill:hover,.pill:focus-visible{color:var(--black);border-color:var(--white)}
+  .pill:focus-visible{outline:2px solid var(--white);outline-offset:4px}
+
+  /* ---------- screen 1 ---------- */
+  #welcome{
+    position:fixed;inset:0;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    gap:34px;
+    background:var(--black);
+    z-index:50;
+    transition:opacity .9s var(--ease),visibility .9s;
+  }
+  #welcome.is-out{opacity:0;visibility:hidden}
+
+  .welcome-name{
+    font-size:13px;
+    letter-spacing:.42em;
+    text-transform:uppercase;
+    text-indent:.42em;
+    color:var(--white);
+  }
+
+  /* ---------- screen 2 ---------- */
+  #delivery{
+    opacity:0;
+    transition:opacity 1s var(--ease) .15s;
+    padding:34px 30px 60px;
+    max-width:1180px;
+    margin:0 auto;
+  }
+  #delivery.is-in{opacity:1}
+
+  .head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:20px;
+    padding-bottom:30px;
+  }
+  .head-right{text-align:right}
+
+  .badge{
+    display:inline-block;
+    padding:5px 13px;
+    border-radius:999px;
+    background:var(--green-dim);
+    border:1px solid rgba(59,167,118,.34);
+    color:var(--green);
+    font-size:9.5px;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+  }
+  .date{
+    margin-top:9px;
+    font-size:10.5px;
+    letter-spacing:.13em;
+    color:var(--muted);
+  }
+
+  .count{
+    font-size:10.5px;
+    letter-spacing:.24em;
+    text-transform:uppercase;
+    color:var(--muted);
+    padding:26px 0 34px;
+    border-top:1px solid rgba(255,255,255,.09);
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(268px,330px));
+    justify-content:center;
+    gap:46px 30px;
+  }
+
+  .card{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    transition:transform .45s var(--ease);
+  }
+  .card:hover{transform:translateY(-8px)}
+
+  .card-num{
+    font-size:10.5px;
+    letter-spacing:.22em;
+    color:var(--muted-2);
+    margin-bottom:13px;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .frame{
+    position:relative;
+    width:100%;
+    aspect-ratio:var(--ratio);
+    border-radius:14px;
+    overflow:hidden;
+    background:#0b0b0b;
+    border:1px solid rgba(255,255,255,.08);
+  }
+  .frame iframe{
+    position:absolute;
+    top:0;left:0;
+    width:100%;height:100%;
+    border:0;
+    display:block;
+  }
+
+  /* ---------- poster overlay (replaces Vimeo's thumbnail) ---------- */
+  .poster{
+    position:absolute;inset:0;
+    display:flex;align-items:center;justify-content:center;
+    background-color:#0d0d0d;
+    background-size:cover;
+    background-position:center;
+    border:0;
+    padding:0;
+    width:100%;
+    overflow:hidden;
+    transition:opacity .45s var(--ease);
+  }
+  .poster::after{
+    content:"";
+    position:absolute;inset:0;
+    background:
+      radial-gradient(120% 90% at 50% 8%,rgba(255,255,255,.09),transparent 62%),
+      linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.55));
+    pointer-events:none;
+  }
+  .poster.is-gone{opacity:0;pointer-events:none}
+
+  .play{
+    position:relative;
+    z-index:2;
+    width:62px;height:62px;
+    border-radius:50%;
+    border:1px solid rgba(255,255,255,.34);
+    background:rgba(255,255,255,.06);
+    -webkit-backdrop-filter:blur(6px);
+    backdrop-filter:blur(6px);
+    display:flex;align-items:center;justify-content:center;
+    transition:background .45s var(--ease),border-color .45s var(--ease),transform .45s var(--ease);
+  }
+  .play svg{
+    width:16px;height:18px;
+    margin-left:3px;
+    fill:var(--white);
+    transition:fill .45s var(--ease);
+  }
+  .card:hover .play{
+    background:var(--white);
+    border-color:var(--white);
+    transform:scale(1.06);
+  }
+  .card:hover .play svg{fill:var(--black)}
+  .poster:focus-visible{outline:2px solid var(--white);outline-offset:-4px}
+
+  .dur{
+    position:absolute;
+    right:9px;bottom:9px;
+    padding:3px 8px;
+    border-radius:4px;
+    background:rgba(0,0,0,.72);
+    font-size:10px;
+    letter-spacing:.05em;
+    color:var(--white);
+    opacity:0;
+    transform:translateY(4px);
+    transition:opacity .35s var(--ease),transform .35s var(--ease);
+    pointer-events:none;
+    z-index:2;
+  }
+  .card:hover .dur{opacity:1;transform:translateY(0)}
+
+  .card-title{
+    margin-top:15px;
+    font-size:11px;
+    letter-spacing:.15em;
+    text-transform:uppercase;
+    text-align:center;
+    color:var(--white);
+    line-height:1.55;
+  }
+
+  .foot{
+    text-align:center;
+    padding-top:66px;
+  }
+  .credit{
+    margin-top:44px;
+    font-size:9.5px;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+    color:var(--muted-2);
+  }
+
+  @media (max-width:640px){
+    #delivery{padding:26px 20px 46px}
+    .grid{grid-template-columns:minmax(0,330px);justify-content:center;gap:40px}
+    .logo--lg{width:94px;height:94px}
+    .pill{padding:14px 32px;font-size:11px}
+    .welcome-name{font-size:11px;letter-spacing:.34em;text-indent:.34em}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms!important;transition-duration:.001ms!important}
+    .logo{animation:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor-glow" id="cursorGlow"></div>
+<div class="cursor" id="cursor"></div>
+
+<!-- ============ SCREEN 1 — WELCOME ============ -->
+<section id="welcome">
+  <img class="logo logo--lg" id="logoBig" src="https://pub-083dce67e7c64bd788fc69e7b5b88c51.r2.dev/5_NakedSundays_delivery_0/Untitled%20Design.png" alt="Naked Sundays">
+  <h1 class="welcome-name">Naked Sundays</h1>
+  <button class="pill" id="enterBtn">Preview Videos</button>
+</section>
+
+<!-- ============ SCREEN 2 — DELIVERY ============ -->
+<main id="delivery">
+
+  <header class="head">
+    <img class="logo logo--sm" id="logoSmall" src="https://pub-083dce67e7c64bd788fc69e7b5b88c51.r2.dev/5_NakedSundays_delivery_0/Untitled%20Design.png" alt="Naked Sundays">
+    <div class="head-right">
+      <span class="badge">Delivered</span>
+      <div class="date">Sep 29, 2026</div>
+    </div>
+  </header>
+
+  <div class="count">2 Videos · Ready to deploy</div>
+
+  <div class="grid">
+
+    <article class="card">
+      <div class="card-num">01</div>
+      <div class="frame">
+        <button class="poster" type="button" data-vimeo="1231111984" data-poster="" aria-label="Play Clip 1">
+          <span class="play"><svg viewBox="0 0 16 18" aria-hidden="true"><path d="M0 0l16 9-16 9z"/></svg></span>
+        </button>
+        <span class="dur">0:15</span>
+      </div>
+      <h2 class="card-title">Clip 1</h2>
+    </article>
+
+    <article class="card">
+      <div class="card-num">02</div>
+      <div class="frame">
+        <button class="poster" type="button" data-vimeo="1231112042" data-poster="" aria-label="Play Clip 2">
+          <span class="play"><svg viewBox="0 0 16 18" aria-hidden="true"><path d="M0 0l16 9-16 9z"/></svg></span>
+        </button>
+        <span class="dur">0:15</span>
+      </div>
+      <h2 class="card-title">Clip 2</h2>
+    </article>
+
+  </div>
+
+  <div class="foot">
+    <a class="pill" id="downloadBtn" href="https://drive.google.com/drive/folders/1v0ik5YXiLTEihMsN1KDux_lUW5QhGYjK?usp=drive_link" target="_blank" rel="noopener">Download all</a>
+    <div class="credit">vzzn.studio</div>
+  </div>
+
+</main>
+
+<script src="https://player.vimeo.com/api/player.js"></script>
+<script>
+/* ---------- logo fallback: plain white circle, no text ---------- */
+document.querySelectorAll('img.logo').forEach(function(img){
+  var src = img.getAttribute('src');
+  var missing = !src || src.indexOf('[') === 0;
+
+  function fallback(){
+    if (!img.parentNode) return;
+    var d = document.createElement('div');
+    d.className = img.className;
+    img.replaceWith(d);
+  }
+
+  if (missing) { fallback(); return; }
+
+  img.addEventListener('error', function(){
+    console.warn('Logo failed to load:', src);
+    fallback();
+  });
+
+  // the image may have already failed before this script ran
+  if (img.complete && img.naturalWidth === 0) {
+    console.warn('Logo failed to load:', src);
+    fallback();
+  }
+});
+
+/* ---------- custom cursor with lag ---------- */
+(function(){
+  var dot  = document.getElementById('cursor');
+  var glow = document.getElementById('cursorGlow');
+  if (!window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+
+  var mx = innerWidth/2, my = innerHeight/2;
+  var dx = mx, dy = my, gx = mx, gy = my;
+
+  addEventListener('mousemove', function(e){ mx = e.clientX; my = e.clientY; });
+
+  (function loop(){
+    dx += (mx - dx) * 0.19;   // slight lag
+    dy += (my - dy) * 0.19;
+    gx += (mx - gx) * 0.10;   // glow trails further behind
+    gy += (my - gy) * 0.10;
+    dot.style.transform  = 'translate(' + dx + 'px,' + dy + 'px) translate(-50%,-50%)';
+    glow.style.transform = 'translate(' + gx + 'px,' + gy + 'px) translate(-50%,-50%)';
+    requestAnimationFrame(loop);
+  })();
+
+  document.addEventListener('mouseover', function(e){
+    if (e.target.closest('.pill, .frame')) dot.classList.add('is-big');
+  });
+  document.addEventListener('mouseout', function(e){
+    if (e.target.closest('.pill, .frame')) dot.classList.remove('is-big');
+  });
+})();
+
+/* ---------- soft tone on enter ---------- */
+function playTone(){
+  try{
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    var ctx = new Ctx();
+    var t = ctx.currentTime;
+
+    [523.25, 784.0].forEach(function(freq, i){
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      var start = t + i * 0.08;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.07, start + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 1.1);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 1.2);
+    });
+
+    setTimeout(function(){ ctx.close(); }, 1800);
+  }catch(e){}
+}
+
+/* ---------- screen transition ---------- */
+document.getElementById('enterBtn').addEventListener('click', function(){
+  playTone();
+  document.getElementById('welcome').classList.add('is-out');
+  document.getElementById('delivery').classList.add('is-in');
+  setTimeout(function(){ window.scrollTo(0,0); }, 60);
+});
+
+/* ---------- click-to-play: our own poster, never Vimeo's thumbnail ----------
+   Optional: put a still image URL in data-poster="" on either .poster button
+   and it will show that image instead of the plain branded card.          */
+document.querySelectorAll('.poster').forEach(function(btn){
+  var img = btn.getAttribute('data-poster');
+  if (img) btn.style.backgroundImage = 'url("' + img + '")';
+
+  btn.addEventListener('click', function(){
+    var id = btn.getAttribute('data-vimeo');
+    if (!id || btn.dataset.loaded) return;
+    btn.dataset.loaded = '1';
+
+    var f = document.createElement('iframe');
+    f.src = 'https://player.vimeo.com/video/' + id +
+            '?title=0&byline=0&portrait=0&badge=0&autopause=0&autoplay=1&player_id=0&app_id=58479';
+    f.setAttribute('allow','autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share');
+    f.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
+    f.setAttribute('allowfullscreen','');
+    f.setAttribute('title', btn.getAttribute('aria-label').replace('Play ',''));
+
+    btn.parentNode.insertBefore(f, btn);
+    requestAnimationFrame(function(){ btn.classList.add('is-gone'); });
+  });
+});
+</script>
+
+</body>
+</html>
