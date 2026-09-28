@@ -363,7 +363,7 @@
   </div>
 
   <div class="foot">
-    <a class="pill" id="downloadBtn" href="https://drive.google.com/drive/folders/1v0ik5YXiLTEihMsN1KDux_lUW5QhGYjK?usp=drive_link" target="_blank" rel="noopener">Download all</a>
+    <a class="pill" id="downloadBtn" href="https://drive.google.com/drive/folders/1DKPGNXXAPMh1txCIfyawHx5d7yT4lchd?usp=drive_link" target="_blank" rel="noopener">Download all</a>
     <div class="credit">vzzn.studio</div>
   </div>
 
@@ -465,7 +465,22 @@ document.getElementById('enterBtn').addEventListener('click', function(){
    and it will show that image instead of the plain branded card.          */
 document.querySelectorAll('.poster').forEach(function(btn){
   var img = btn.getAttribute('data-poster');
-  if (img) btn.style.backgroundImage = 'url("' + img + '")';
+  if (img) {
+    btn.style.backgroundImage = 'url("' + img + '")';
+  } else {
+    // no poster set: pull the video's own thumbnail from Vimeo (falls back to the plain card)
+    var vid = btn.getAttribute('data-vimeo');
+    if (vid && window.fetch) {
+      fetch('https://vimeo.com/api/oembed.json?url=' +
+            encodeURIComponent('https://vimeo.com/' + vid) + '&width=720')
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(d){
+          if (d && d.thumbnail_url && !btn.dataset.loaded)
+            btn.style.backgroundImage = 'url("' + d.thumbnail_url + '")';
+        })
+        .catch(function(){});
+    }
+  }
 
   btn.addEventListener('click', function(){
     var id = btn.getAttribute('data-vimeo');
