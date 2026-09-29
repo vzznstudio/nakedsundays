@@ -489,7 +489,7 @@ document.querySelectorAll('.poster').forEach(function(btn){
 
     var f = document.createElement('iframe');
     f.src = 'https://player.vimeo.com/video/' + id +
-            '?title=0&byline=0&portrait=0&badge=0&autopause=0&autoplay=1&player_id=0&app_id=58479';
+            '?title=0&byline=0&portrait=0&badge=0&autopause=0&autoplay=1&muted=0&player_id=0&app_id=58479';
     f.setAttribute('allow','autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share');
     f.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
     f.setAttribute('allowfullscreen','');
@@ -497,6 +497,35 @@ document.querySelectorAll('.poster').forEach(function(btn){
 
     btn.parentNode.insertBefore(f, btn);
     requestAnimationFrame(function(){ btn.classList.add('is-gone'); });
+
+    /* ---------- force sound on ----------
+       Vimeo mutes autoplay when a browser blocks autoplay-with-sound.
+       Turn sound on and restart playback; if the browser still refuses
+       (mostly Safari/iOS), pause unmuted so the next tap plays with sound. */
+    if (!window.Vimeo || !Vimeo.Player) return;
+    var player = new Vimeo.Player(f);
+
+    function soundOn(){
+      return player.setMuted(false)
+        .then(function(){ return player.setVolume(1); })
+        .catch(function(){});
+    }
+
+    player.ready().then(function(){
+      soundOn()
+        .then(function(){ return player.play(); })
+        .catch(function(){
+          // unmuted autoplay blocked: stay unmuted and wait for a tap on Vimeo's play button
+          player.pause().catch(function(){});
+          soundOn();
+        });
+    });
+
+    // if Vimeo re-mutes itself once playback starts, unmute again (once)
+    player.on('play', function once(){
+      player.off('play', once);
+      player.getMuted().then(function(m){ if (m) soundOn(); }).catch(function(){});
+    });
   });
 });
 </script>
